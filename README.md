@@ -62,13 +62,29 @@ Domain 3: Управление температурой
 Чтобы добавить ссылку в файл Readme.md, нужно использовать синтаксис Markdown. Это делают так:
 
 ```markdown
-//www.plantuml.com/plantuml/png/5Ckn2i8m40RWlKyH7y1cSN8IwgWYWZZAcHvDu98Bbp_euzkk7tod1ZBqB0CIXDsBB4RjZTsa1Vo3EoTQZF8mx589qcVk9Yu2jHszD_gEIqBidxLOs4h163JxHmfaizuILnO_7VPteOBdzU8pDR2jz9uqLotRgFzQocMtQIW8mtkUuYWhHr3o2coGO5VH89O8Y8KYvO808TWr2L2gL8r0IB02AbxWrCJ4kSHvXPatuf-_FYHAdOeDgbhxJC_yyyrbR0JNzkFdBxgToAHkkCfzF2fuoayPYvUvVfGbVdAd0rdf8Km9Z2D9jUyarxxaifAvfBYJuU_2IUPuCTUUBCHh7-yPd3nTu81BS4bXjdyEz507bMgWUDHeDpiM_enttiCL499fp-Ajo67li08AiZD9YViTfp5ESptLeo8O33c92YUZaYdT4oZ9p86HqeHA2Kv-uYMIGMf93LdWiMJStvA2z-0DwjcEqBasEtTn1ibVYximaUvi8um7a4mi7b8VNL4L9mbJ89fXZKDUeAT23XZmCRUJTOVG7neWEWLgmVhmzkkNKID-rNmI6z9d1Ze2owmy_j1TTpYcrjrBhTQHvNMtMzyhAorp_lgFIMP5sJb1Yv3YpF9cbySWaIIqDeIlIQB3RMC9vaqhmBsuLSntkzlfjh0w1DIUJHGaJcIYWr3QLCxtZ4RxX7yB0nApbExKw_i7BdeGFwv25Q9XN3TLV-3-BxQRamy5AjU0umkZvq9ipoYUvvBpFcoym9soo9OYUp5nbz5guk6nO0LdEYZGraphdd-3u-OIbrHwSyrtbjKQ6UOQDE_O_INUXZ9rQBiFNm0NMSrgF5A3qUPb--YhLu1_AIIzVjZ-c21ZFSRlwQu1YvvrMwrcvsdrln47piqn-CGLJKXo77gzefndF5Psn-RL6857l0rtW-S4WJP8RiMT1ZxeVm00
+@startuml
+title Warhhouse Context Diagram
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Person(user, "User", "Удалённо управляет отоплением и просматривает температуру")
+Person(admin, "Специалист по установке", "Подключает дом и устройство к системе при первичном монтаже")
+System(WarmhouseSystem, "Warmhouse System", "Система измеряет температуру в доме и дает возможность упралять ей")
+
+System_Ext(device, "Датчик температуры + реле отопления", "IoT-устройство", "Измеряет температуру и принимает команды включения/выключения отопления.")
+
+Rel(user, monolith, "Использует веб-интерфейс", "HTTPS (Web)")
+Rel(admin, monolith, "Регистрирует/настраивает дом и оборудование", "через интерфейс/админку")
+Rel(monolith, device, "Отправляет команды управления отоплением", "Синхронный запрос (HTTP/протокол устройства)")
+Rel(monolith, device, "Запрашивает текущую температуру (polling)", "Синхронный запрос (HTTP/протокол устройства)")
+Rel(device, monolith, "Возвращает показания температуры/статусы", "Синхронный ответ")
+@enduml
 ```
 
 Замените `Текст ссылки` текстом, который хотите использовать для ссылки. Вместо `URL` вставьте адрес, на который должна вести ссылка. Например:
 
 ```markdown
-[Посетите Яндекс](https://ya.ru/)
+//www.plantuml.com/plantuml/png/5Ckn2i8m40RWlKyH7y1cSN8IwgWYWZZAcHvDu98Bbp_euzkk7tod1ZBqB0CIXDsBB4RjZTsa1Vo3EoTQZF8mx589qcVk9Yu2jHszD_gEIqBidxLOs4h163JxHmfaizuILnO_7VPteOBdzU8pDR2jz9uqLotRgFzQocMtQIW8mtkUuYWhHr3o2coGO5VH89O8Y8KYvO808TWr2L2gL8r0IB02AbxWrCJ4kSHvXPatuf-_FYHAdOeDgbhxJC_yyyrbR0JNzkFdBxgToAHkkCfzF2fuoayPYvUvVfGbVdAd0rdf8Km9Z2D9jUyarxxaifAvfBYJuU_2IUPuCTUUBCHh7-yPd3nTu81BS4bXjdyEz507bMgWUDHeDpiM_enttiCL499fp-Ajo67li08AiZD9YViTfp5ESptLeo8O33c92YUZaYdT4oZ9p86HqeHA2Kv-uYMIGMf93LdWiMJStvA2z-0DwjcEqBasEtTn1ibVYximaUvi8um7a4mi7b8VNL4L9mbJ89fXZKDUeAT23XZmCRUJTOVG7neWEWLgmVhmzkkNKID-rNmI6z9d1Ze2owmy_j1TTpYcrjrBhTQHvNMtMzyhAorp_lgFIMP5sJb1Yv3YpF9cbySWaIIqDeIlIQB3RMC9vaqhmBsuLSntkzlfjh0w1DIUJHGaJcIYWr3QLCxtZ4RxX7yB0nApbExKw_i7BdeGFwv25Q9XN3TLV-3-BxQRamy5AjU0umkZvq9ipoYUvvBpFcoym9soo9OYUp5nbz5guk6nO0LdEYZGraphdd-3u-OIbrHwSyrtbjKQ6UOQDE_O_INUXZ9rQBiFNm0NMSrgF5A3qUPb--YhLu1_AIIzVjZ-c21ZFSRlwQu1YvvrMwrcvsdrln47piqn-CGLJKXo77gzefndF5Psn-RL6857l0rtW-S4WJP8RiMT1ZxeVm00
 ```
 
 # Задание 2. Проектирование микросервисной архитектуры
@@ -76,12 +92,88 @@ Domain 3: Управление температурой
 В этом задании вам нужно предоставить только диаграммы в модели C4. Мы не просим вас отдельно описывать получившиеся микросервисы и то, как вы определили взаимодействия между компонентами To-Be системы. Если вы правильно подготовите диаграммы C4, они и так это покажут.
 
 **Диаграмма контейнеров (Containers)**
+```markdown
+@startuml
+title Warmhouse Container Diagram
 
-Добавьте диаграмму.
+top to bottom direction
 
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Container.puml
+
+Person(user, "User", "Удалённо управляет отоплением и просматривает температуру")
+System(WarmhouseSystem, "Warmhouse System", "Система измеряет температуру в доме и дает возможность упралять ей")
+
+Container_Boundary(WarmhouseSystem, "Warmhouse System") {
+  Container(WebApp, "Web Application", "GO", "Handles user interactions")
+  Container(DeviceMgmt, "Управление устройством", "GO", "Доставлять команды на физическое устройство управления отоплением")
+  Container(TempSensor, "Измеритель температуры", "GO", "Принимает и отдает показания по температуре")
+  Container(HeatingControl, "Управление температуры", "GO", "Дает пользователю управлять отоплением дома")
+  Container(Database, "Database", "PostgreSQL", "")
+}
+
+System_Ext(device, "Датчик температуры + реле отопления", "IoT-устройство", "Измеряет температуру, установка определенной темературы и принимает команды включения/выключения отопления.")
+
+Rel(user, WebApp, "Uses the system")
+Rel(WebApp,Database,"Reads/Writes user data")
+Rel(WebApp,DeviceMgmt,"Доставлять команды на физическое устройство управления отоплением")
+Rel(DeviceMgmt,device,"Доставлять команды на физическое устройство управления отоплением")
+Rel(WebApp,TempSensor,"Отдает показания по температуре")
+Rel(device,TempSensor,"Отдает показания по температуре")
+Rel(WebApp,HeatingControl,"дает пользователю управлять отоплением дома")
+Rel(device,HeatingControl,"дает пользователю управлять отоплением дома")
+@enduml
+```
 **Диаграмма компонентов (Components)**
+```markdown 
+@startuml
+title Wormhouse Web Application Component Diagram
 
-Добавьте диаграмму для каждого из выделенных микросервисов.
+top to bottom direction
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Container_Boundary(WarmhouseSystem, "Warmhouse System") {
+  Container(WebApp, "Web Application", "Go", "Handles user interactions")
+  Container(Database, "Database", "PostgreSQL", "Stores user data")
+}
+
+Container(WebApp, "Web Application", "GO") {
+  Component(AuthController, "AuthController", "Handles authentication and authorization")
+  Component(UserController, "UserController", "Manages user profiles")
+  Component(ServiceLayer, "Service Layer", "Business logic")
+  Component(RepositoryLayer, "Repository Layer", "Data access logic")
+}
+
+Rel(AuthController,ServiceLayer,"Calls business logic")
+Rel(UserController,ServiceLayer,"Calls business logic")
+Rel(ServiceLayer,RepositoryLayer,"Reads/Writes data")
+Rel(RepositoryLayer,Database,"Reads/Writes user data")
+@enduml
+```
+@startuml
+title Wormhouse Device Menegment, Component Diagram
+
+top to bottom direction
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Container_Boundary(Warmhouse, "Теплый дом") {
+  Container(DeviceMgmt, "Управление устройством", "Go", "Handles user interactions")
+  Container(Device, "Датчик температуры + реле отопления", "IoT-устройство", "Измеряет температуру и принимает команды включения/выключения отопления.")
+
+}
+
+Container(DeviceMgmt, "Управление устройством", "GO") {
+  Component(API, "API", "API")
+  Component(UserController, "обработчик команд", "")
+  Component(ServiceLayer, "менеджер состояния устройств", "")
+  Component(RepositoryLayer, "Repository Layer", "Data access logic")
+}
+
+Rel(UserController,ServiceLayer,"Calls business logic")
+Rel(ServiceLayer,RepositoryLayer,"Reads/Writes data")
+Rel(RepositoryLayer,Device,"Reads/Writes user data")
+@enduml
 
 **Диаграмма кода (Code)**
 
