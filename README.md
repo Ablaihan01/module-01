@@ -163,28 +163,26 @@ Container_Boundary(WarmhouseSystem, "Warmhouse System") {
 
 ```markdown 
 @startuml
-title Wormhouse Device Menegment, Component Diagram
+title Warmhouse Управление устройствами (Device Management) - Component Diagram (A)
 
 top to bottom direction
-
 !includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
 
-Container_Boundary(Warmhouse, "Теплый дом") {
-  Container(DeviceMgmt, "Управление устройством", "Go", "Handles user interactions")
-  Container(Device, "Датчик температуры + реле отопления", "IoT-устройство", "Измеряет температуру и принимает команды включения/выключения отопления.")
-
+Container_Boundary(warmhouse, "Warmhouse System") {
+  Container(DeviceMgmt, "Управление устройствами", "Go", "Реестр устройств, привязка к дому, статусы, маршрутизация команд")
+  Container_Ext(connector, "Device Connector", "Go", "Единая точка общения с устройствами")
 }
 
-Container(DeviceMgmt, "Управление устройством", "GO") {
-  Component(API, "API", "API")
-  Component(UserController, "обработчик команд", "")
-  Component(ServiceLayer, "менеджер состояния устройств", "")
-  Component(RepositoryLayer, "Repository Layer", "Data access logic")
+Container_Boundary(DeviceMgmt, "Управление устройствами", "Go", "Реестр устройств, привязка к дому, статусы, маршрутизация команд") {
+  Container(api, "API", "HTTP", "Эндпоинты для регистрации/привязки устройств, запроса состояния, отправки команд")
+  Container(cmdHandler, "Обработчик команд", "Go", "Принимает команду, валидирует, создаёт correlationId, ставит в обработку и инициирует доставку")
+  Container(stateMgr, "Менеджер состояния устройств", "Go", "Хранит и обновляет состояние устройств (online/offline, lastSeen, текущие статусы), статусы исполнения команд")
 }
 
-Rel(UserController,ServiceLayer,"Calls business logic")
-Rel(ServiceLayer,RepositoryLayer,"Reads/Writes data")
-Rel(RepositoryLayer,Device,"Reads/Writes user data")
+Rel(api, cmdHandler, "Передаёт команды/операции")
+Rel(api, stateMgr, "Запрашивает состояние/реестр")
+Rel(cmdHandler, stateMgr, "Обновляет статусы команд и устройства")
+Rel(cmdHandler, connector, "Отправляет команду на доставку")
 @enduml
 ```
 
