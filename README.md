@@ -38,33 +38,28 @@
 
 ### 3. Определение доменов и границы контекстов
 
-Опишите здесь домены, которые вы выделили.
 Domain 1 : Управление устройствами
-	Описание: управление жизненным циклом устройств в экосистеме: реестр устройств, привязка устройства к дому/пользователю, хранение параметров подключения (endpoint, ключи, протокол), контроль доступности/онлайна, управление адаптерами/драйверами протоколов и доставка команд до физического устройства через коннектор/gateway.
-		контекст: Регистрация устройства и идентификация (deviceId, тип, модель, версия прошивки).
+	Описание: реестр устройств, привязка устройства к дому/пользователю, хранение параметров подключения (endpoint, ключи, протокол), контроль доступности, управление протоколами и отправка команд до физического устройства.
+		Контекст: Регистрация устройства и идентификация.
 				Привязка/отвязка устройства к дому и владельцу.
-				Хранение и обновление параметров подключения (сеть, токены/ключи, настройки протокола).
-				Определение канала связи и протокола (адаптеры: MQTT/HTTP/CoAP и т.п.).
+				Хранение и обновление параметров подключения.
+				Определение протокола.
 				Отправка команд устройству, получение статусов доставки/выполнения.
-				Мониторинг доступности (online/offline, lastSeen, health-check).
+				Мониторинг доступности.
 
 Domain 2: Измеритель температуры
-	Описание: приём телеметрии от устройств (измерения температуры и другие показатели), нормализация и валидация данных, хранение истории измерений, вычисление “текущих” значений и предоставление данных для отображения в интерфейсе и для сценариев автоматизации.
-		Контекст: Приём измерений (температура, влажность и т.д.) по временным меткам.
+	Описание: приём телеметрии от устройств (измерения температуры), нормализация и валидация данных, хранение истории измерений, вычисление “текущих” значений.
+		Контекст: Приём измерений (температура) по временным меткам.
 				Валидация/фильтрация (дубликаты, выбросы, пропуски).
-				Хранение истории (time-series) и агрегации (среднее/мин/макс).
+				Хранение истории и агрегации (среднее/мин/макс).
 				Расчёт “текущего значения” (последнее актуальное).
-				Выдача телеметрии в WebApp и другим доменам по API/событиям.
-				Обработка задержек/потерь связи (данные пришли позже — всё равно сохраняем корректно).
 
 Domain 3: Управление температурой
-	Описание: доменная бизнес-логика отопления: правила и режимы (вкл/выкл, расписания, целевая температура, сценарии), формирование команд на отопление и управление состоянием “что мы хотели сделать” и “что получилось”, без знания конкретных протоколов и способов связи с железом (это зона Device Management/connector).
-		контекст: Команды пользователя: включить/выключить/установить режим/цель.
-				Правила и сценарии: расписания, “если температура < X — включить”.
-				Формирование команд в бизнес-терминах (TurnHeatingOn, SetTargetTemp).
-				Контроль статусов исполнения (принято/выполнено/ошибка/таймаут) через Device Mgmt.
-				Хранение состояния отопления (desired vs actual).
-				Взаимодействие с Telemetry (например, для автологики) через API/события.
+	Описание: правила и режимы (вкл/выкл, расписания, целевая температура, сценарии), формирование команд на отопление и управление состоянием “что мы хотели сделать” и “что получилось”.
+		Контекст: Команды пользователя: включить/выключить/установить режим/цель.
+				Правила и сценарии: расписания, формирование команд.
+				Контроль статусов исполнения (принято/выполнено/ошибка/таймаут).
+				Хранение состояния отопления.
 		
 ### **4. Проблемы монолитного решения**
 
@@ -121,6 +116,7 @@ Container_Boundary(WarmhouseSystem, "Warmhouse System") {
   Container(TempSensor, "Измеритель температуры", "GO", "Принимает и отдает показания по температуре")
   Container(HeatingControl, "Управление температуры", "GO", "Дает пользователю управлять отоплением дома")
   Container(Database, "Database", "PostgreSQL", "")
+  Container(DeviceConnector, "Device Connector", "Точка общения с устройствами")
 }
 
 System_Ext(device, "Датчик температуры + реле отопления", "IoT-устройство", "Измеряет температуру, установка определенной темературы и принимает команды включения/выключения отопления.")
@@ -128,38 +124,40 @@ System_Ext(device, "Датчик температуры + реле отопле�
 Rel(user, WebApp, "Uses the system")
 Rel(WebApp,Database,"Reads/Writes user data")
 Rel(WebApp,DeviceMgmt,"Доставлять команды на физическое устройство управления отоплением")
-Rel(DeviceMgmt,device,"Доставлять команды на физическое устройство управления отоплением")
+Rel(DeviceConnector,DeviceMgmt,"Доставлять команды на физическое устройство управления отоплением")
 Rel(WebApp,TempSensor,"Отдает показания по температуре")
-Rel(device,TempSensor,"Отдает показания по температуре")
+Rel(DeviceConnector,TempSensor,"Отдает показания по температуре")
 Rel(WebApp,HeatingControl,"дает пользователю управлять отоплением дома")
-Rel(device,HeatingControl,"дает пользователю управлять отоплением дома")
+Rel(DeviceConnector,HeatingControl,"дает пользователю управлять отоплением дома")
+Rel(DeviceConnector, device, "Единая точка общения с датчиками")
 @enduml
 ```
 **Диаграмма компонентов (Components)**
+
 ```markdown 
 @startuml
-title Wormhouse Web Application Component Diagram
+title Warmhouse Web Application - Component Diagram
 
 top to bottom direction
-
 !includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
 
 Container_Boundary(WarmhouseSystem, "Warmhouse System") {
+
   Container(WebApp, "Web Application", "Go", "Handles user interactions")
-  Container(Database, "Database", "PostgreSQL", "Stores user data")
-}
+  ContainerDb(Database, "Database", "PostgreSQL", "Stores data")
 
-Container(WebApp, "Web Application", "GO") {
-  Component(AuthController, "AuthController", "Handles authentication and authorization")
-  Component(UserController, "UserController", "Manages user profiles")
-  Component(ServiceLayer, "Service Layer", "Business logic")
-  Component(RepositoryLayer, "Repository Layer", "Data access logic")
-}
+  Container(WebApp, "Web Application", "Go", "Handles user interactions") {
+    Component(AuthController, "AuthController", "HTTP Controller", "Authentication and authorization")
+    Component(UserController, "UserController", "HTTP Controller", "User profile operations")
+    Component(ServiceLayer, "Service Layer", "Go", "Business logic")
+    Component(RepositoryLayer, "Repository Layer", "Go", "Data access")
+  }
 
-Rel(AuthController,ServiceLayer,"Calls business logic")
-Rel(UserController,ServiceLayer,"Calls business logic")
-Rel(ServiceLayer,RepositoryLayer,"Reads/Writes data")
-Rel(RepositoryLayer,Database,"Reads/Writes user data")
+  Rel(AuthController, ServiceLayer, "Calls")
+  Rel(UserController, ServiceLayer, "Calls")
+  Rel(ServiceLayer, RepositoryLayer, "Uses")
+  Rel(RepositoryLayer, Database, "Reads/Writes", "SQL")
+}
 @enduml
 ```
 
