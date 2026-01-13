@@ -185,11 +185,131 @@ Rel(cmdHandler, stateMgr, "Обновляет статусы команд и у�
 Rel(cmdHandler, connector, "Отправляет команду на доставку")
 @enduml
 ```
+```markdown 
+@startuml
+title Warmhouse TempSensor - Component Diagram
 
+top to bottom direction
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Container_Boundary(WarmhouseSystem, "Warmhouse System") {
+
+  Container(TempSensor, "Измеритель температуры", "GO", "Принимает и отдает показания по температуре")
+  ContainerDb(Database, "Database", "PostgreSQL", "Stores telemetry data")
+  Container_Ext(DeviceConnector, "Device Connector", "GO", "Точка общения с устройствами")
+  Container_Ext(WebApp, "Web Application", "GO", "UI/запросы температуры")
+
+  Container(TempSensor, "Измеритель температуры", "GO", "Принимает и отдает показания по температуре") {
+    Component(API, "API", "HTTP", "Приём измерений и выдача текущей/исторической температуры")
+    Component(UserController, "обработчик телеметрии", "Go", "Обрабатывает входящие измерения (валидация/нормализация)")
+    Component(ServiceLayer, "менеджер истории температур", "Go", "Хранение истории и расчёт текущей температуры")
+    Component(RepositoryLayer, "Repository Layer", "Go", "Data access logic")
+  }
+
+  Rel(DeviceConnector, API, "Отдает показания по температуре", "HTTP")
+  Rel(WebApp, API, "Запрашивает температуру/историю", "HTTP")
+
+  Rel(API, UserController, "Передаёт входящие измерения")
+  Rel(API, ServiceLayer, "Запрос текущей/исторической")
+  Rel(UserController, ServiceLayer, "Передаёт нормализованные данные")
+  Rel(ServiceLayer, RepositoryLayer, "Reads/Writes data")
+  Rel(RepositoryLayer, Database, "Reads/Writes", "PostgreSQL")
+}
+@enduml
+```
+```markdown
+@startuml
+title Warmhouse HeatingControl - Component Diagram
+
+top to bottom direction
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Container_Boundary(WarmhouseSystem, "Warmhouse System") {
+
+  Container(HeatingControl, "Управление температуры", "GO", "Дает пользователю управлять отоплением дома")
+  Container_Ext(WebApp, "Web Application", "GO", "UI/команды пользователя")
+  Container_Ext(DeviceMgmt, "Управление устройством", "GO", "Доставлять команды на физическое устройство")
+  Container_Ext(TempSensor, "Измеритель температуры", "GO", "Текущая температура/история")
+
+  Container(HeatingControl, "Управление температуры", "GO", "Дает пользователю управлять отоплением дома") {
+    Component(API, "API", "HTTP", "Вкл/выкл, состояние, сценарии/режимы")
+    Component(UserController, "обработчик команд отопления", "Go", "Обрабатывает команды пользователя и формирует действия")
+    Component(ServiceLayer, "менеджер логики отопления", "Go", "Бизнес-логика: правила/режимы")
+    Component(RepositoryLayer, "Repository Layer", "Go", "Data access logic")
+  }
+
+  Rel(WebApp, API, "дает пользователю управлять отоплением дома")
+
+  Rel(API, UserController, "Передаёт команды")
+  Rel(UserController, ServiceLayer, "Calls business logic")
+
+  Rel(ServiceLayer, TempSensor, "Читает температуру (для логики)")
+  Rel(ServiceLayer, DeviceMgmt, "Отправляет команду на устройство")
+
+  Rel(ServiceLayer, RepositoryLayer, "Reads/Writes data")
+}
+@enduml
+```
+
+```markdown
+@startuml
+title Warmhouse DeviceConnector - Component Diagram
+
+top to bottom direction
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Container_Boundary(WarmhouseSystem, "Warmhouse System") {
+
+  Container(DeviceConnector, "Device Connector", "GO", "Точка общения с устройствами")
+  Container_Ext(DeviceMgmt, "Управление устройством", "GO", "Команды на устройства")
+  Container_Ext(TempSensor, "Измеритель температуры", "GO", "Показания температуры")
+  System_Ext(device, "Датчик температуры + реле отопления", "IoT-устройство", "Измеряет температуру и принимает команды")
+
+  Container(DeviceConnector, "Device Connector", "GO", "Точка общения с устройствами") {
+    Component(API, "API", "Принимает команды от DeviceMgmt и управляет устройствами")
+    Component(UserController, "маршрутизатор протоколов", "Go", "Выбирает способ связи/адаптер по типу устройства")
+    Component(ServiceLayer, "адаптеры устройств", "Go", "Драйверы/адаптеры протоколов")
+    Component(RepositoryLayer, "обработчик телеметрии", "Go", "Принимает телеметрию и отправляет в TempSensor")
+  }
+
+  Rel(DeviceMgmt, API, "Доставлять команды на физическое устройство")
+  Rel(API, UserController, "Передаёт команду")
+  Rel(UserController, ServiceLayer, "Вызывает адаптер")
+  Rel(ServiceLayer, device, "Управляет/читает")
+
+  Rel(device, RepositoryLayer, "Отдает показания/статусы")
+  Rel(RepositoryLayer, TempSensor, "Отдает показания по температуре")
+}
+@enduml
+```
 
 **Диаграмма кода (Code)**
 
-Добавьте одну диаграмму или несколько.
+```markdown
+@startuml
+title Warmhouse - Code Diagram (Simple Adapter Routing)
+
+interface Adapter {
+  +sendCommand(commandType: string, payload: string): string
+}
+
+class HttpAdapter
+class MqttAdapter
+
+class DeviceConnector {
+  -adapters: Map<string, Adapter>
+  +register(protocol: string, adapter: Adapter)
+  +send(protocol: string, commandType: string, payload: string): string
+}
+
+Adapter <|.. HttpAdapter
+Adapter <|.. MqttAdapter
+
+DeviceConnector --> Adapter : uses
+DeviceConnector o-- HttpAdapter : has
+DeviceConnector o-- MqttAdapter : has
+@enduml
+```
 
 # Задание 3. Разработка ER-диаграммы
 
