@@ -312,8 +312,98 @@ DeviceConnector o-- MqttAdapter : has
 ```
 
 # Задание 3. Разработка ER-диаграммы
+```markdown 
+@startuml
+title Warmhouse  ER-Diagram
 
-Добавьте сюда ER-диаграмму. Она должна отражать ключевые сущности системы, их атрибуты и тип связей между ними.
+hide circle
+skinparam linetype ortho
+
+entity "User" as user {
+  * id : uuid <<PK>>
+  --
+  email : varchar
+  password_hash : varchar
+  created_at : timestamp
+}
+
+entity "House" as house {
+  * id : uuid <<PK>>
+  --
+  user_id : uuid <<FK>>
+  name : varchar
+  address : varchar
+  created_at : timestamp
+}
+
+entity "DeviceType" as dev_type {
+  * id : uuid <<PK>>
+  --
+  name : varchar          
+  vendor : varchar
+  model : varchar
+  protocol : varchar     
+  created_at : timestamp
+}
+
+entity "Device" as device {
+  * id : uuid <<PK>>
+  --
+  type_id : uuid <<FK>>
+  house_id : uuid <<FK>>
+  serial_number : varchar
+  endpoint : varchar
+  auth_key : varchar
+  status : varchar        
+  last_seen_at : timestamp
+  created_at : timestamp
+}
+
+entity "TelemetryData" as telemetry {
+  * id : uuid <<PK>>
+  --
+  device_id : uuid <<FK>>
+  metric : varchar        
+  value : numeric
+  measured_at : timestamp
+  received_at : timestamp
+}
+
+entity "HeatingState" as heating_state {
+  * id : uuid <<PK>>
+  --
+  house_id : uuid <<FK>>
+  desired_state : varchar   
+  actual_state : varchar    
+  updated_at : timestamp
+}
+
+entity "Command" as cmd {
+  * id : uuid <<PK>>
+  --
+  device_id : uuid <<FK>>
+  created_by_user_id : uuid <<FK>>
+  command_type : varchar     
+  correlation_id : varchar
+  status : varchar           
+  error_message : text
+  created_at : timestamp
+  sent_at : timestamp
+  completed_at : timestamp
+}
+
+user  ||--o{ house : owns
+house ||--o{ device : contains
+dev_type ||--o{ device : classifies
+
+device ||--o{ telemetry : generates
+device ||--o{ cmd : receives
+user  ||--o{ cmd : issues
+
+house ||--|| heating_state : has
+
+@enduml
+```
 
 # Задание 4. Создание и документирование API
 
