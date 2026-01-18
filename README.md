@@ -441,8 +441,8 @@ HeatingControl обязан сразу давать ответ на  вход и
 
 ### 2. Документация API
 
-OpenAPI REST: [openapi.yaml](openapi.yaml)
-AsyncAPI: [asyncapi.yaml](asyncapi.yaml)
+OpenAPI REST: [openapi](openapi)
+AsyncAPI: [asyncapi](asyncapi)
 
 
 # Задание 5. Работа с docker и docker-compose
