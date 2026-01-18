@@ -1,0 +1,75 @@
+asyncapi: 2.6.0
+info:
+  title: Warmhouse - AsyncAPI (MVP)
+  version: 1.0.0
+  description: >
+    Асинхронное взаимодействие для потока телеметрии температуры.
+    Паблишер: Device Connector
+    Подписчик: TempSensor (Измеритель температуры)
+
+servers:
+  mqttBroker:
+    url: mqtt://broker:1883
+    protocol: mqtt
+    description: MQTT брокер для телеметрии (пример)
+
+channels:
+  telemetry.temperature.v1:
+    description: Температурные измерения от устройств
+    publish:
+      summary: Device Connector публикует измерения температуры
+      message:
+        $ref: '#/components/messages/TemperatureTelemetry'
+    subscribe:
+      summary: TempSensor принимает измерения температуры
+      message:
+        $ref: '#/components/messages/TemperatureTelemetry'
+
+components:
+  messages:
+    TemperatureTelemetry:
+      name: TemperatureTelemetry
+      title: Temperature Telemetry
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - device_id
+          - metric
+          - value
+          - unit
+          - measured_at
+        properties:
+          device_id:
+            type: string
+            format: uuid
+            description: ID устройства (из реестра DeviceMgmt)
+          metric:
+            type: string
+            example: temperature
+            description: Тип метрики
+          value:
+            type: number
+            example: 21.7
+            description: Значение температуры
+          unit:
+            type: string
+            example: C
+            description: Единица измерения
+          measured_at:
+            type: string
+            format: date-time
+            description: Время измерения на устройстве
+          received_at:
+            type: string
+            format: date-time
+            description: Время получения на стороне коннектора (опционально)
+      examples:
+        - name: sample
+          payload:
+            device_id: "a0a0a0a0-3333-4c3c-cccc-333333333333"
+            metric: "temperature"
+            value: 21.7
+            unit: "C"
+            measured_at: "2026-01-18T10:01:10Z"
+            received_at: "2026-01-18T10:01:12Z"
