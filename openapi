@@ -1,0 +1,385 @@
+openapi: 3.0.3
+info:
+  title: Warmhouse - API (MVP)
+  version: 1.0.0
+  description: >
+    Контракты взаимодействия микросервисов Warmhouse:
+    - DeviceMgmt (Управление устройством)
+    - TempSensor (Измеритель температуры)
+    - HeatingControl (Управление температуры)
+
+tags:
+  - name: DeviceMgmt
+    description: Управление устройством — реестр устройств, привязка к дому, команды, статусы
+  - name: TempSensor
+    description: Измеритель температуры — приём телеметрии и выдача температуры
+  - name: HeatingControl
+    description: Управление температуры — пользовательские команды отопления, бизнес-логика
+
+paths:
+  # =========================
+  # DeviceMgmt (Управление устройством)
+  # =========================
+  /devices:
+    post:
+      tags: [DeviceMgmt]
+      summary: Регистрация устройства и привязка к дому
+      description: WebApp вызывает DeviceMgmt, чтобы зарегистрировать устройство и привязать к дому.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRegisterRequest'
+            examples:
+              example:
+                value:
+                  house_id: "9d3d3d9a-1111-4d5a-aaaa-111111111111"
+                  type_id: "c1c1c1c1-2222-4b2b-bbbb-222222222222"
+                  serial_number: "SN-00001234"
+                  protocol: "HTTP"
+                  endpoint: "http://192.168.1.50"
+                  auth_key: "secret-token"
+      responses:
+        "201":
+          description: Устройство зарегистрировано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+              examples:
+                created:
+                  value:
+                    id: "a0a0a0a0-3333-4c3c-cccc-333333333333"
+                    house_id: "9d3d3d9a-1111-4d5a-aaaa-111111111111"
+                    type_id: "c1c1c1c1-2222-4b2b-bbbb-222222222222"
+                    serial_number: "SN-00001234"
+                    protocol: "HTTP"
+                    endpoint: "http://192.168.1.50"
+                    status: "unknown"
+        "400":
+          description: Ошибка валидации
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "409":
+          description: Устройство уже существует (serial_number занят)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "500":
+          description: Ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /devices/{deviceId}/commands:
+    post:
+      tags: [DeviceMgmt]
+      summary: Отправка команды устройству
+      description: >
+        HeatingControl или WebApp отправляет команду в DeviceMgmt.
+        DeviceMgmt создаёт correlation_id и инициирует доставку через DeviceConnector.
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeviceCommandRequest' }
+            examples:
+              turn_on:
+                value:
+                  command_type: "turn_on"
+                  payload: {}
+              turn_off:
+                value:
+                  command_type: "turn_off"
+                  payload: {}
+      responses:
+        "202":
+          description: Команда принята (accepted)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommandAck' }
+              examples:
+                accepted:
+                  value:
+                    command_id: "b7b7b7b7-4444-4d4d-dddd-444444444444"
+                    correlation_id: "corr-1700000000000"
+                    status: "accepted"
+        "400":
+          description: Некорректная команда
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "404":
+          description: Устройство не найдено
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "500":
+          description: Ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  # =========================
+  # TempSensor (Измеритель температуры)
+  # =========================
+  /telemetry/temperature:
+    post:
+      tags: [TempSensor]
+      summary: Приём измерения температуры
+      description: >
+        DeviceConnector отправляет в TempSensor измерение температуры.
+        TempSensor сохраняет историю и рассчитывает текущую температуру.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TemperatureTelemetryIngest' }
+            examples:
+              example:
+                value:
+                  device_id: "a0a0a0a0-3333-4c3c-cccc-333333333333"
+                  value: 21.7
+                  unit: "C"
+                  measured_at: "2026-01-18T10:01:10Z"
+      responses:
+        "202":
+          description: Измерение принято
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IngestAck' }
+              examples:
+                accepted:
+                  value:
+                    status: "accepted"
+        "400":
+          description: Ошибка валидации
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "500":
+          description: Ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /houses/{houseId}/temperature/current:
+    get:
+      tags: [TempSensor]
+      summary: Получить текущую температуру в доме
+      description: WebApp или HeatingControl запрашивает текущую температуру.
+      parameters:
+        - name: houseId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Текущая температура
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TemperatureCurrentResponse' }
+              examples:
+                example:
+                  value:
+                    house_id: "9d3d3d9a-1111-4d5a-aaaa-111111111111"
+                    temperature: 21.7
+                    unit: "C"
+                    measured_at: "2026-01-18T10:01:10Z"
+        "404":
+          description: Нет данных по дому
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "500":
+          description: Ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  # =========================
+  # HeatingControl (Управление температуры)
+  # =========================
+  /houses/{houseId}/heating/command:
+    post:
+      tags: [HeatingControl]
+      summary: Команда отопления от пользователя
+      description: >
+        WebApp вызывает HeatingControl. HeatingControl применяет бизнес-логику и отправляет команду в DeviceMgmt.
+      parameters:
+        - name: houseId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HeatingCommandRequest' }
+            examples:
+              turn_on:
+                value:
+                  action: "turn_on"
+              turn_off:
+                value:
+                  action: "turn_off"
+      responses:
+        "202":
+          description: Команда принята, инициирована отправка в DeviceMgmt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HeatingCommandAck' }
+              examples:
+                accepted:
+                  value:
+                    house_id: "9d3d3d9a-1111-4d5a-aaaa-111111111111"
+                    action: "turn_on"
+                    status: "accepted"
+                    device_command:
+                      device_id: "a0a0a0a0-3333-4c3c-cccc-333333333333"
+                      command_type: "turn_on"
+        "400":
+          description: Ошибка валидации
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "404":
+          description: Дом не найден
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "500":
+          description: Ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+components:
+  schemas:
+    # -------- DeviceMgmt --------
+    DeviceRegisterRequest:
+      type: object
+      required: [house_id, type_id, serial_number, protocol, endpoint]
+      properties:
+        house_id: { type: string, format: uuid }
+        type_id: { type: string, format: uuid }
+        serial_number: { type: string }
+        protocol:
+          type: string
+          description: Протокол устройства (как у тебя: “протокол”)
+          example: HTTP
+        endpoint:
+          type: string
+          description: Адрес устройства/шлюза в сети пользователя
+          example: "http://192.168.1.50"
+        auth_key:
+          type: string
+          nullable: true
+          description: Ключ/токен для доступа к устройству (если нужен)
+
+    Device:
+      type: object
+      required: [id, house_id, type_id, serial_number, protocol, endpoint, status]
+      properties:
+        id: { type: string, format: uuid }
+        house_id: { type: string, format: uuid }
+        type_id: { type: string, format: uuid }
+        serial_number: { type: string }
+        protocol: { type: string, example: HTTP }
+        endpoint: { type: string }
+        status:
+          type: string
+          description: online|offline|unknown
+          example: unknown
+
+    DeviceCommandRequest:
+      type: object
+      required: [command_type, payload]
+      properties:
+        command_type:
+          type: string
+          description: Тип команды (вкл/выкл/и т.п.)
+          example: turn_on
+        payload:
+          type: object
+          additionalProperties: true
+          description: Параметры команды (если есть)
+          example: {}
+
+    CommandAck:
+      type: object
+      required: [command_id, correlation_id, status]
+      properties:
+        command_id: { type: string, format: uuid }
+        correlation_id: { type: string, example: corr-1700000000000 }
+        status:
+          type: string
+          description: accepted|done|error|timeout
+          example: accepted
+
+    # -------- TempSensor --------
+    TemperatureTelemetryIngest:
+      type: object
+      required: [device_id, value, unit, measured_at]
+      properties:
+        device_id: { type: string, format: uuid }
+        value: { type: number, example: 21.7 }
+        unit: { type: string, example: C }
+        measured_at: { type: string, format: date-time }
+
+    IngestAck:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, example: accepted }
+
+    TemperatureCurrentResponse:
+      type: object
+      required: [house_id, temperature, unit, measured_at]
+      properties:
+        house_id: { type: string, format: uuid }
+        temperature: { type: number, example: 21.7 }
+        unit: { type: string, example: C }
+        measured_at: { type: string, format: date-time }
+
+    # -------- HeatingControl --------
+    HeatingCommandRequest:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          description: Команда отопления
+          enum: [turn_on, turn_off]
+
+    HeatingCommandAck:
+      type: object
+      required: [house_id, action, status, device_command]
+      properties:
+        house_id: { type: string, format: uuid }
+        action: { type: string, example: turn_on }
+        status: { type: string, example: accepted }
+        device_command:
+          type: object
+          required: [device_id, command_type]
+          properties:
+            device_id: { type: string, format: uuid }
+            command_type: { type: string, example: turn_on }
+
+    # -------- Common --------
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string, example: VALIDATION_ERROR }
+        message: { type: string, example: "Некорректный запрос" }
+        details:
+          type: object
+          additionalProperties: true
